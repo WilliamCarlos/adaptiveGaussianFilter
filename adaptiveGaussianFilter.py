@@ -29,7 +29,7 @@ height, width = image.shape
 
 print(image)
 
-j = 21
+j = 9
 halfJ = int(j/2)
 eValues = []
 
