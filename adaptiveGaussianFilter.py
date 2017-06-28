@@ -40,8 +40,28 @@ maxJ = 7
 halfMaxJ = int(maxJ/2)
 eValues = []
 
+# returns vertical distance to closest top/bottom edge of the image (in number of rows)
+# where vertical distance = number of cells in between the current row and the edge
+def getRowDistanceToEdge(row):
+    dist = min(row, height-row-1)
 
-# Now getFilterSize scales linearly with j, not quadratically. Should be able to use bigger filters a lot more efficiently now if needed
+    if dist < 0:  # is this necessary?
+        dist = 0
+
+    return dist
+
+# returns horizontal distance to closest left/right edge of the image (in number of colors)
+# where horizontal distance = number of cells in between the current col and the edge
+def getColDistanceToEdge(col):
+    dist = min(col, height-col-1)
+
+    if dist < 0:  # is this necessary?
+        dist = 0
+
+    return dist
+
+# Now getFilterSize scales linearly with j, not quadratically.
+# Should be able to use bigger filters a lot more efficiently now if needed
 def getFilterSize(row, col, j, prevFrequencyArrays):
     halfJ = int(j/2)
 
@@ -49,11 +69,10 @@ def getFilterSize(row, col, j, prevFrequencyArrays):
     if j==1:
         pass
     elif prevFrequencyArrays[j][1] == row-1 and prevFrequencyArrays[j][2] == col:  # if prev window was 1 row above us, same col
-        # then we can use the adjacent memoized window frequency array + delta in rows (1 row added, 1 subtracted) to calculate the new window
-        # print("J is {0}".format(j))
+        # then we can use the adjacent memoized window frequency array + delta/change in rows
+        # (1 row added, 1 subtracted) to calculate the new window
         oldFrequencyArray = prevFrequencyArrays[j][0]
 
-        # TODO: check array slicing --Looks good
         # get delta columns
         addedRow = image[row+halfJ, col-halfJ:col+halfJ+1]
         removedRow = image[row-halfJ-1, col-halfJ:col+halfJ+1]
@@ -64,6 +83,7 @@ def getFilterSize(row, col, j, prevFrequencyArrays):
         for remove in removedRow:
             oldFrequencyArray[remove] -= 1
         frequencyArray = oldFrequencyArray
+
     else: # otherwise compute the window from scratch
         for x in range(-halfJ, halfJ + 1):
             for y in range(-halfJ, halfJ + 1):
@@ -71,11 +91,12 @@ def getFilterSize(row, col, j, prevFrequencyArrays):
                 frequencyArray[greyValue] += 1
 
     # memoize current window
-    if j!=1:
+    if j != 1:
         prevFrequencyArrays[j][0] = frequencyArray
         prevFrequencyArrays[j][1] = row
         prevFrequencyArrays[j][2] = col
 
+    # compute the E_t score for the current j x j window
     Et = 0
     totalPixels = j**2
     for i in range(0, 256):
@@ -83,7 +104,7 @@ def getFilterSize(row, col, j, prevFrequencyArrays):
         if pv == 0:
             continue
         else:
-            Et += pv*math.log(pv, 2)  # maybe memoize this later
+            Et += pv*math.log(pv, 2)  # maybe memoize this later.. probably worth memoizing?
     Et = -1 * Et  # TODO: how is this sometimes outputting negative numbers?
 
     Et_threshold = 3.0
@@ -103,9 +124,11 @@ totalPixels = width*height
 currentPixel = 0
 adaptiveBlurred = np.zeros((height, width))  # TODO: col-row + change above in memoization part
 
-for col in range(halfMaxJ, width-halfMaxJ):
-    for row in range(halfMaxJ, height-halfMaxJ):
-        kernelSize = getFilterSize(row, col, maxJ, prevFrequencyArrays)
+for col in range(0, width):
+    for row in range(0, height):
+        # We correct maxJ for edge cases (constrained by the edge of the image)
+        constrainedMaxJ = min(maxJ, 2*getRowDistanceToEdge(row)+1, 2*getColDistanceToEdge(col)+1)
+        kernelSize = getFilterSize(row, col, constrainedMaxJ, prevFrequencyArrays)
 
         # print("kernelSize {0}".format(kernelSize))
         adaptiveBlurred[row][col] = imageBlurredDictionary[kernelSize][row][col]
