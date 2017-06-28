@@ -1,16 +1,14 @@
-# import cv2
-# import cv3
 import math
 import seaborn as sns
 import matplotlib.pyplot as plt
 import sys
 import numpy as np
-# sys.path.append('/usr/local/opt/opencv3/lib/python2.7/site-packages/')
 import cv2
 import time
+import pdb
 from collections import defaultdict
 
-
+np.set_printoptions(threshold='nan')
 startTime = time.time()
 log = open('eValues.txt', 'w')
 
@@ -38,120 +36,45 @@ imageBlurredDictionary[27] = cv2.GaussianBlur(image, (27, 27), 0)
 # height, width, channels = image.shape
 height, width = image.shape
 
-print(image)
-
-# j = 9
-# halfJ = int(j/2)
-
-maxJ = 27
+maxJ = 7
 halfMaxJ = int(maxJ/2)
 eValues = []
 
-np.set_printoptions(threshold='nan')
 
-
-def getPixel(row, col, kernelSize):  # better practice to use case switch here?
-    if kernelSize == 1:
-        # no blur
-        print("kernelsize: 1")
-        return image[row][col]
-    elif kernelSize == 3:
-        print("kernelsize: 3")
-        return imageBlurred3[row][col]
-    elif kernelSize == 5:
-        print("kernelsize: 5")
-        return imageBlurred5[row][col]
-    elif kernelSize == 7:
-        print("kernelsize: 7")
-        return imageBlurred7[row][col]
-    elif kernelSize == 9:
-        print("kernelsize: 9")
-        return imageBlurred9[row][col]
-    elif kernelSize == 11:
-        print("kernelsize: 11")
-        return imageBlurred11[row][col]
-    elif kernelSize == 13:
-        print("kernelsizse: 13")
-        return imageBlurred13[row][col]
-    elif kernelSize == 15:
-        print("kernelsize: 15")
-        return imageBlurred15[row][col]
-    elif kernelSize == 17:
-        print("kernelsize: 17")
-        return imageBlurred17[row][col]
-    elif kernelSize == 19:
-        print("kernelsize: 19")
-        return imageBlurred19[row][col]
-    elif kernelSize == 21:
-        print("kernelsize: 21")
-        return imageBlurred21[row][col]
-    elif kernelSize == 23:
-        print("kernelsize: 23")
-        return imageBlurred23[row][col]
-    elif kernelSize == 25:
-        print("kernelsize: 25")
-        return imageBlurred25[row][col]
-    elif kernelSize == 27:
-        print("kernelsize: 27")
-        return imageBlurred27[row][col]
-    else:
-        print("Uh oh. Unexpected kernel size passed to getPixel")
-        return
-# # returns optimal filter size s where 0<s<j
-# # TODO: can heavily optimize this. Kernel slides over by one. Look at the delta in columns (1 column gained, 1 lost).
-# # TODO: can update frequencyArray in 2*j operations instead of j^2 operations.
-# def getFilterSize(row, col, j):
-#     # initialize frequencyArray with 0s
-#     frequencyArray = []
-#     for i in range(0, 256):
-#         frequencyArray.append(0);
-#
-#     for x in range(-halfJ, halfJ+1):
-#         for y in range(-halfJ, halfJ+1):
-#             greyValue = image[row + y][col + x]
-#             # print "indexing [{0},{1}] from center pixel [{2},{3}]".format(row+y, col+x, row, col)
-#             frequencyArray[greyValue] += 1
-#
-#     Et = 0
-#     totalPixels = j**2
-#     for i in range(0, 256):
-#         pv = frequencyArray[i]/float(totalPixels)
-#         if pv == 0:
-#             continue  # this was break before!
-#         else:
-#             # print("non-zero pv {0} which leads to a pv*ld(pv) of {1}").format(pv, (pv*math.log(pv,2)))
-#             Et += pv*math.log(pv, 2)  # maybe memoize this later
-#
-#     Et = -1 * Et
-#     if Et == 0:
-#         # print("0 kernel")
-#         # print image[0:20, 0:20]  # why isn't it [0:20][0:20]?
-#         print("frequencyArray")
-#         print(frequencyArray)
-#
-#     # print("new eValue {0}").format(Et)
-#     log.write(str(Et))
-#     log.write('\n')
-#     eValues.append(Et)
-
-
-# global variable wat
-# global nonZeroEt
-# nonZeroEt = 0
-
-
-
-def getFilterSize(row, col, j):
+# Now getFilterSize scales linearly with j, not quadratically. Should be able to use bigger filters a lot more efficiently now if needed
+def getFilterSize(row, col, j, prevFrequencyArrays):
     halfJ = int(j/2)
 
-    # initialize frequencyArray with 0s
-    frequencyArray = [0] * 256
+    frequencyArray = [0] * 256   # initialize frequencyArray with 0s
+    if j==1:
+        pass
+    elif prevFrequencyArrays[j][1] == row-1 and prevFrequencyArrays[j][2] == col:  # if prev window was 1 row above us, same col
+        # then we can use the adjacent memoized window frequency array + delta in rows (1 row added, 1 subtracted) to calculate the new window
+        # print("J is {0}".format(j))
+        oldFrequencyArray = prevFrequencyArrays[j][0]
 
-    for x in range(-halfJ, halfJ+1):
-        for y in range(-halfJ, halfJ+1):
-            greyValue = image[row + y][col + x]
-            # print "indexing [{0},{1}] from center pixel [{2},{3}]".format(row+y, col+x, row, col)
-            frequencyArray[greyValue] += 1
+        # TODO: check array slicing --Looks good
+        # get delta columns
+        addedRow = image[row+halfJ, col-halfJ:col+halfJ+1]
+        removedRow = image[row-halfJ-1, col-halfJ:col+halfJ+1]
+
+        # update frequency array
+        for add in addedRow:
+            oldFrequencyArray[add] += 1
+        for remove in removedRow:
+            oldFrequencyArray[remove] -= 1
+        frequencyArray = oldFrequencyArray
+    else: # otherwise compute the window from scratch
+        for x in range(-halfJ, halfJ + 1):
+            for y in range(-halfJ, halfJ + 1):
+                greyValue = image[row + y][col + x]
+                frequencyArray[greyValue] += 1
+
+    # memoize current window
+    if j!=1:
+        prevFrequencyArrays[j][0] = frequencyArray
+        prevFrequencyArrays[j][1] = row
+        prevFrequencyArrays[j][2] = col
 
     Et = 0
     totalPixels = j**2
@@ -161,32 +84,35 @@ def getFilterSize(row, col, j):
             continue
         else:
             Et += pv*math.log(pv, 2)  # maybe memoize this later
-    Et = -1 * Et  # TODO: how is this sometimes outputting negative numbers? 
+    Et = -1 * Et  # TODO: how is this sometimes outputting negative numbers?
 
     Et_threshold = 3.0
-    # if j < 2:
-    #     print("REACHED BOTTOM OF RECURSIVE STACK WITHOUT GETTING BELOW THRESHOLD, RETURNING 1")  # e.g. no blur
-    #     return 1
     if Et < Et_threshold:
-        print("kernel size: {0} for eValue {1}".format(j, Et))
+        # print("kernel size: {0} for eValue {1}".format(j, Et))
         return j
     else:
-        return getFilterSize(row, col, j-2)  # TODO:hardcode
+        return getFilterSize(row, col, j-2, prevFrequencyArrays)  # TODO:hardcode
 
+
+prevFrequencyArrays = [0] * (maxJ + 1)
+prevFrequencyArrays[3] = [None,0,0]  # store Array, row, col
+prevFrequencyArrays[5] = [None,0,0]
+prevFrequencyArrays[7] = [None,0,0]  # TODO: hardcoded
 
 totalPixels = width*height
 currentPixel = 0
-adaptiveBlurred = np.zeros((height, width))
+adaptiveBlurred = np.zeros((height, width))  # TODO: col-row + change above in memoization part
+
 for col in range(halfMaxJ, width-halfMaxJ):
     for row in range(halfMaxJ, height-halfMaxJ):
-        kernelSize = getFilterSize(row, col, maxJ)
-        print("kernelSize {0}".format(kernelSize))
-        # adaptiveBlurred[row][col] = getPixel(row, col, kernelSize)
+        kernelSize = getFilterSize(row, col, maxJ, prevFrequencyArrays)
+
+        # print("kernelSize {0}".format(kernelSize))
         adaptiveBlurred[row][col] = imageBlurredDictionary[kernelSize][row][col]
 
-        # print("calculated {0}".format(height*col + row))
         currentPixel += 1
         print("% Calculated: {0}".format(float(currentPixel*100)/totalPixels))
+
 print("eValues")
 print(eValues)
 print("sum of evalues")
@@ -199,15 +125,6 @@ print(sum(eValues))
 dict = defaultdict(int)
 for value in eValues:
     dict[value] += value
-
-
-
-
-
-
-
-
-
 print("histogram dict")
 print(dict)
 
