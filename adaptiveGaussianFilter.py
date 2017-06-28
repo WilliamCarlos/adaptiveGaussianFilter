@@ -50,6 +50,14 @@ def getColDistanceToEdge(col):
 
     return dist
 
+Et_dictionary = {}
+def calcEt(pv):
+    if pv in Et_dictionary:
+        return Et_dictionary[pv]
+    else:
+        Et_dictionary[pv] = pv * math.log(pv, 2)
+        return Et_dictionary[pv]
+
 # Now getFilterSize scales linearly with j, not quadratically.
 # Should be able to use bigger filters a lot more efficiently now if needed
 def getFilterSize(row, col, j, prevFrequencyArrays):
@@ -94,7 +102,7 @@ def getFilterSize(row, col, j, prevFrequencyArrays):
         if pv == 0:
             continue
         else:
-            Et += pv*math.log(pv, 2)  # maybe memoize this later.. probably worth memoizing?
+            Et += calcEt(pv)  # calculates E_t given pv, memoizes as well
     Et = -1 * Et  # TODO: how is this sometimes outputting negative numbers?
 
     Et_threshold = 3.0
