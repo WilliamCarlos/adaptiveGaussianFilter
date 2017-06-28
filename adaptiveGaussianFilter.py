@@ -15,23 +15,6 @@ log = open('eValues.txt', 'w')
 # load image
 image = cv2.imread('croppedAsteroid.jpg', cv2.IMREAD_GRAYSCALE)  #.astype(np.float32)
 
-
-imageBlurredDictionary = [0] * 28  # initialize imageBlurredDictionary with 28 indices set to 0
-imageBlurredDictionary[1] = image
-imageBlurredDictionary[3] = cv2.GaussianBlur(image, (3, 3), 0)
-imageBlurredDictionary[5] = cv2.GaussianBlur(image, (5, 5), 0)
-imageBlurredDictionary[7] = cv2.GaussianBlur(image, (7, 7), 0)
-imageBlurredDictionary[9] = cv2.GaussianBlur(image, (9, 9), 0)
-imageBlurredDictionary[11] = cv2.GaussianBlur(image, (11, 11), 0)
-imageBlurredDictionary[13] = cv2.GaussianBlur(image, (13, 13), 0)
-imageBlurredDictionary[15] = cv2.GaussianBlur(image, (15, 15), 0)
-imageBlurredDictionary[17] = cv2.GaussianBlur(image, (17, 17), 0)
-imageBlurredDictionary[19] = cv2.GaussianBlur(image, (19, 19), 0)
-imageBlurredDictionary[21] = cv2.GaussianBlur(image, (21, 21), 0)
-imageBlurredDictionary[23] = cv2.GaussianBlur(image, (23, 23), 0)
-imageBlurredDictionary[25] = cv2.GaussianBlur(image, (25, 25), 0)
-imageBlurredDictionary[27] = cv2.GaussianBlur(image, (27, 27), 0)
-
 # Width and Height of Image
 # height, width, channels = image.shape
 height, width = image.shape
@@ -39,6 +22,13 @@ height, width = image.shape
 maxJ = 7
 halfMaxJ = int(maxJ/2)
 eValues = []
+
+# imageBlurredDictionary[j] stores a copy of image blurred with a jxj gaussian kernel (used for memoization)
+imageBlurredDictionary = [0] * (maxJ+1)
+imageBlurredDictionary[1] = image
+for j in range(3, maxJ+2, 2):
+    imageBlurredDictionary[j] = cv2.GaussianBlur(image, (j, j), 0)
+
 
 # returns vertical distance to closest top/bottom edge of the image (in number of rows)
 # where vertical distance = number of cells in between the current row and the edge
@@ -112,13 +102,13 @@ def getFilterSize(row, col, j, prevFrequencyArrays):
         # print("kernel size: {0} for eValue {1}".format(j, Et))
         return j
     else:
-        return getFilterSize(row, col, j-2, prevFrequencyArrays)  # TODO:hardcode
+        return getFilterSize(row, col, j-2, prevFrequencyArrays)
 
 
 prevFrequencyArrays = [0] * (maxJ + 1)
-prevFrequencyArrays[3] = [None,0,0]  # store Array, row, col
-prevFrequencyArrays[5] = [None,0,0]
-prevFrequencyArrays[7] = [None,0,0]  # TODO: hardcoded
+
+for j in range(3, maxJ+2, 2):
+    prevFrequencyArrays[j] = [None,0,0] # store Array, row, col
 
 totalPixels = width*height
 currentPixel = 0
