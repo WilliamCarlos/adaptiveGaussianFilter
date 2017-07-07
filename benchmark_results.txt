@@ -1,0 +1,19 @@
+Benchmark results:
+
+"Regarding hamming distance, here are the benchmarks for 8/32/64 bit uints. (wegner = current method in CensusTransform.h)
+
+8 bit lookup: 30652 <-- fastest (87% faster than wegner, 36% faster than popcount)
+8 bit wegner: 242957
+8 bit popcount: 47864
+
+32 bit lookup: 119923 (used same lookup table as 8bit using bit shift/masking to break 32bit into 4 8bit lookups) 
+32 bit wegner: 563849
+32 bit popcount: 44996 <-- fastest (92% faster than wegner, 62% faster than lookup)
+
+64 bit wegner: 570129
+64 bit popcount: 45808 <-- fastest (92% faster than wegner)
+(didn't bother trying lookup table here)
+
+So it looks like using a lookup table for 8bit uints and popcount for 32 and 64 bit ints is optimal (and should *hopefully* cut computational load by ~90%!). This was all benchmarked in C++"
+
+
