@@ -51,6 +51,7 @@ def getColDistanceToEdge(col):
     return dist
 
 Et_dictionary = {}
+# Return Et score given p_v. Dictionary used for memoization.
 def calcEt(pv):
     if pv in Et_dictionary:
         return Et_dictionary[pv]
@@ -103,7 +104,13 @@ def getFilterSize(row, col, j, prevFrequencyArrays):
             continue
         else:
             Et += calcEt(pv)  # calculates E_t given pv, memoizes as well
-    Et = -1 * Et  # TODO: how is this sometimes outputting negative numbers?
+    Et = -1 * Et
+    if Et < 0:
+        print("pv")
+        print(pv)
+        print("Et")
+        print(Et)
+        sys.exit()
 
     Et_threshold = 3.0
     if Et < Et_threshold:
