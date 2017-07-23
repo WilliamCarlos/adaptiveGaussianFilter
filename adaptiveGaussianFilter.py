@@ -8,6 +8,8 @@ import time
 import pdb
 from collections import defaultdict
 
+print "initializing" 
+
 np.set_printoptions(threshold='nan')
 startTime = time.time()
 log = open('eValues.txt', 'w')
@@ -129,6 +131,8 @@ totalPixels = width*height
 currentPixel = 0
 adaptiveBlurred = np.zeros((height, width))  # TODO: col-row + change above in memoization part
 
+printStepSize = 5000
+currentStep = 0
 for col in range(0, width):
     for row in range(0, height):
         # We correct maxJ for edge cases (constrained by the edge of the image)
@@ -139,7 +143,10 @@ for col in range(0, width):
         adaptiveBlurred[row][col] = imageBlurredDictionary[kernelSize][row][col]
 
         currentPixel += 1
-        print("% Calculated: {0}".format(float(currentPixel*100)/totalPixels))
+        currentStep += 1 
+        if(currentStep == printStepSize):
+            print("% Calculated: {0}".format(float(currentPixel*100)/totalPixels))
+            currentStep = 0            
 
 print("eValues")
 print(eValues)
