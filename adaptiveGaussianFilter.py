@@ -133,6 +133,14 @@ adaptiveBlurred = np.zeros((height, width))  # TODO: col-row + change above in m
 
 printStepSize = 5000
 currentStep = 0
+
+# Traceback (most recent call last):
+#   File "./mountain_right.py", line 133, in <module>
+#     kernelSize = getFilterSize(row, col, constrainedMaxJ, prevFrequencyArrays)
+#   File "./mountain_right.py", line 86, in getFilterSize
+#     greyValue = image[row + y][col + x]
+# IndexError: index 2200 is out of bounds for axis 0 with size 2200
+
 for col in range(0, width):
     for row in range(0, height):
         # We correct maxJ for edge cases (constrained by the edge of the image)
